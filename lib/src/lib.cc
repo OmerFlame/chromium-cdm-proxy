@@ -3,14 +3,15 @@
 #include <iostream>
 #include <cstring>
 
+#include <vector>
+
 void on_init() {
     ZLOG("Proxy initializing ...");
-    char* lib_path = getenv(lib::ENV_CDM_LIB);
-    if(lib_path == nullptr || strlen(lib_path) == 0) {
-        ZLOG("Please set environment variable: %s", lib::ENV_CDM_LIB);
-    } else {
-        lib::proxy_ptr = proxy::LibProxy::Hijack(lib_path);
-    }
+    
+    char *lib_path = "libwidevinecdm-original.dylib";
+    lib::proxy_ptr = proxy::LibProxy::Hijack(lib_path);
+
+    ZLOG("Should dump: %s", getenv("DUMP"));
 }
 
 void on_fini() {

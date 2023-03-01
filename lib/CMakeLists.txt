@@ -1,5 +1,7 @@
 project(proxy)
 
+find_package(Poco REQUIRED Net)
+
 aux_source_directory(src/common SRC_FILES)
 aux_source_directory(src/api SRC_FILES)
 aux_source_directory(src/proxy SRC_FILES)

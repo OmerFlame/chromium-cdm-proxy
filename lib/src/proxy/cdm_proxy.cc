@@ -1,6 +1,13 @@
 #include "cdm_proxy.h"
+#include <iostream>
+#include <cstdlib>
+#include <string>
+#include <utility>
+#include <string_view>
 
 namespace proxy {
+    bool did_start = false;
+    size_t last_bufsize = 1000;
 
     CdmProxy_10::CdmProxy_10(void* ptr) {
         this->up_ptr =static_cast<CdmInterface*>(ptr);
@@ -8,19 +15,16 @@ namespace proxy {
 
     void CdmProxy_10::Initialize(bool allow_distinctive_identifier,
                                  bool allow_persistent_state, bool use_hw_secure_codecs) {
-        ZLOG("allow_distinctive_identifier=%d, allow_persistent_state=%d, use_hw_secure_codecs=%d",
-             allow_distinctive_identifier, allow_persistent_state, use_hw_secure_codecs);
         up_ptr->Initialize(allow_distinctive_identifier, allow_persistent_state, use_hw_secure_codecs);
     }
 
     void CdmProxy_10::GetStatusForPolicy(uint32_t promise_id, const cdm::Policy &policy) {
-        ZLOG("promise_id=%d", promise_id);
+        //ZLOG("promise_id=%d", promise_id);
         up_ptr->GetStatusForPolicy(promise_id, policy);
     }
 
     void CdmProxy_10::SetServerCertificate(uint32_t promise_id, const uint8_t *server_certificate_data,
                                            uint32_t server_certificate_data_size) {
-        ZLOG("promise_id=%d, server_certificate_data_size=%d", promise_id, server_certificate_data_size);
         up_ptr->SetServerCertificate(promise_id,
                                      server_certificate_data, server_certificate_data_size);
     }
@@ -28,6 +32,7 @@ namespace proxy {
     void CdmProxy_10::CreateSessionAndGenerateRequest(uint32_t promise_id, cdm::SessionType session_type,
                                                       cdm::InitDataType init_data_type, const uint8_t *init_data,
                                                       uint32_t init_data_size) {
+        
         ZLOG("promise_id=%d, session_tpye=%d, init_data_type=%d, init_data_size=%d",
              promise_id, session_type, init_data_type, init_data_size);
         up_ptr->CreateSessionAndGenerateRequest(promise_id, session_type,
@@ -58,14 +63,54 @@ namespace proxy {
     }
 
     void CdmProxy_10::TimerExpired(void *context) {
-        ZLOG("context=%p", context);
         up_ptr->TimerExpired(context);
     }
 
     cdm::Status CdmProxy_10::Decrypt(const cdm::InputBuffer_2 &encrypted_buffer,
                                      cdm::DecryptedBlock *decrypted_buffer) {
         auto result = up_ptr->Decrypt(encrypted_buffer, decrypted_buffer);
-        ZLOG("result => %d", result);
+
+        uint8_t *buf = decrypted_buffer->DecryptedBuffer()->Data();
+        size_t bufsize = decrypted_buffer->DecryptedBuffer()->Size();
+
+        char *one = "1";
+
+        if (getenv("DUMP") == NULL) {
+            return result;
+        }
+
+        if (strcmp(getenv("DUMP"), one) == 0) {
+            ZLOG("Saving to file!");
+
+            char *dump_dir = getenv("Z_DUMP_DIR");
+
+            if (dump_dir == NULL)
+            {
+                ZLOG("PROXY WARNING: Z_DUMP_DIR env var not set. Not dumping.");
+            } else {
+                std::string file_path(dump_dir);
+                if (!file_path.ends_with("/")) {
+                    file_path += "/";
+                }
+
+                file_path += "decrypted.aac";
+                FILE *f = fopen(file_path.c_str(), "ab");
+
+                if (f == NULL) {
+                    ZLOG("Failed opening file!");
+                    perror("fopen");
+
+                    return result;
+                }
+
+                fwrite(buf, bufsize, 1, f);
+
+                fclose(f);
+
+                last_bufsize = bufsize;
+            }
+        }
+
         return result;
     }
 
@@ -122,6 +167,8 @@ namespace proxy {
     }
 
     void CdmProxy_10::Destroy() {
+        did_start = false;
+
         ZLOG("");
         up_ptr->Destroy();
     }

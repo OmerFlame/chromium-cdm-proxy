@@ -9,18 +9,16 @@ namespace proxy {
     }
 
     cdm::Buffer * CdmHostProxy_10::Allocate(uint32_t capacity) {
-        ZLOG("capacity=%d", capacity);
         return up_ptr->Allocate(capacity);
     }
 
     void CdmHostProxy_10::SetTimer(int64_t delay_ms, void *context) {
-        ZLOG("delay_ms=%ld, context=%p", delay_ms, context);
         up_ptr->SetTimer(delay_ms, context);
     }
 
     cdm::Time CdmHostProxy_10::GetCurrentWallTime() {
         auto result = up_ptr->GetCurrentWallTime();
-        ZLOG("result => %f", result);
+        //ZLOG("result => %f", result);
         return result;
     }
 
